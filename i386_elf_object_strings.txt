@@ -1,0 +1,45 @@
+The Netwide Assembler 0.98.40 (Apple Computer, Inc. build 11)
+.multiboot
+.bootstrap_stack,
+.text
+.comment
+.shstrtab
+.symtab
+.strtab
+.rel.text
+src/boot.asm
+MBALIGN
+MEMINFO
+FLAGS
+MAGIC
+CHECKSUM
+stack_bottom
+stack_top
+_start
+kernel_main
+_start.hang
+fffff.
+fffff.
+Hello, kernel!
+Apple LLVM version 7.3.0 (clang-703.0.31)
+make_vgaentry
+terminal_row
+.rel.text
+.comment
+terminal_putentryat
+.L.str
+terminal_setcolor
+terminal_color
+make_color
+terminal_buffer
+terminal_putchar
+terminal_column
+kernel_main
+strlen
+.note.GNU-stack
+terminal_writestring
+terminal_initialize
+src/kernel.c
+.strtab
+.symtab
+.rodata.str1.1
