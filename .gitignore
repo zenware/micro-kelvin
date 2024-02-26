@@ -109,3 +109,7 @@ docgen_tmp/
 *.o
 *.obj
 *.bc
+
+# Added by cargo
+
+/target
