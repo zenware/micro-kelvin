@@ -19,6 +19,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#if !defined(__i386__)
+	#error "Must be compiled with an x86-elf compiler"
+#endif
+
 /*
 * Hardware text mode color constants.
 * https://en.wikipedia.org/wiki/Video_Graphics_Array#Color_palette
@@ -417,6 +421,7 @@ void terminal_write_rainbow(void) {
 
 /*
 * Setup the VGA Buffer Memory and Print the String "Hello, kernel!\n"
+* Supported Charset: https://en.wikipedia.org/wiki/Code_page_437
 */
 void kernel_main() {
 	terminal_initialize();
