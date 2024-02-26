@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
 # Build the ASM File which Bootstraps the C Callstack
-# nasm -f elf -M src/boot.asm -o build/boot.o
+# -M is "generate Makefile dependencies on stdout", why did I ever have that...
+nasm -f elf -M src/boot.asm -o build/boot.o
 
 # Build the C File which Bootstraps the VGA Color Text mode
 # And outputs the text 'Hello Kernel'
 # ~/opt/cross/bin/i686-elf-gcc -c src/kernel.c -o build/kernel.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra
+# NOTE: Why would I have used -std=gnu99 and also -nostdlib
 i686-elf-gcc -c src/kernel.c -o build/kernel.o -std=gnu99 -ffreestanding -O2 -nostdlib -Wall -Wextra
 # Link the ELF objects together correctly into a bootable binary.
 # TODO: Figure out the -lgcc thing.
