@@ -127,6 +127,11 @@ impl fmt::Write for Writer {
 use lazy_static::lazy_static;
 use spin::Mutex;
 
+// NOTE: https://os.phil-opp.com/paging-introduction/#implementation
+// we have inadvertently enabled paging as it's required for 64 bit mode.
+// the bootloader `cargo bootimage` has already set up a 4-level paging hierarchy
+// And it has "identity mapped" the virtual page 0xb8000 to the physical frame of
+// the same name.
 lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,

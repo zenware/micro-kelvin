@@ -1,4 +1,6 @@
+// Most, if-not all core imports here will be accidental.
 //use core::iter::Chain;
+//use core::error;
 
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 use lazy_static::lazy_static;
@@ -18,6 +20,9 @@ lazy_static! {
             .set_handler_fn(timer_interrupt_handler);
         idt[InterruptIndex::Keyboard.as_usize()]
             .set_handler_fn(keyboard_interrupt_handler);
+
+        idt.page_fault.set_handler_fn(page_fault_handler);
+
         idt
     };
 }
@@ -56,18 +61,56 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: InterruptStackFrame)
 {
+    use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+    use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    // TODO: What is this magic number?
-    // Is this the PIC-8259 PS/2 line?
+    lazy_static! {
+        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
+            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1,
+                HandleControl::Ignore)
+        );
+    }
+
+    // IBM XT, IBM 3270 PC, and IBM AT were the scancode sets.
+    // PS/2 keyboards emulate IBM XT, so that's what we do here.
+    // https://wiki.osdev.org/Keyboard#Scan_Code_Set_1
+    let mut keyboard = KEYBOARD.lock();
+    // TODO: What is this magic number? - Is this the PIC-8259 PS/2 line?
     let mut port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
-    print!("{}", scancode);
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::Unicode(character) => print!("{}", character),
+                DecodedKey::RawKey(key) => print!("{:?}", key),
+            }
+        }
+    }
 
+    // TODO: Consider Configuring the PS/2 Keyboard
+    // https://wiki.osdev.org/PS/2_Keyboard#Commands
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
     }
+}
+
+use x86_64::structures::idt::PageFaultErrorCode;
+use crate::hlt_loop;
+
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: PageFaultErrorCode,
+) {
+    // TODO: What is 'control register' cr2?
+    use x86_64::registers::control::Cr2;
+
+    println!("EXCEPTION: PAGE FAULT");
+    println!("Accessed Address: {:?}", Cr2::read());
+    println!("Error Code: {:?}", error_code);
+    println!("{:#?}", stack_frame);
+    hlt_loop();
 }
 
 /*
