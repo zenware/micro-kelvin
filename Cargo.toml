@@ -1,0 +1,47 @@
+[package]
+name = "micro-kelvin"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jay Looney <jay.m.looney@gmail.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata.bootimage]
+# Automatically close QEMU on `cargo test`
+# Also allow serial macros to work, and don't show qemu window since we have a test-mode panic handler.
+test-args = [
+    "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio",
+    "-display", "none"
+]
+test-success-exit-code = 33  # (0x10 << 1) | 1
+test-timeout = 300 # (in seconds)
+
+# `cargo build`
+[profile.dev]
+# cargo bug as of Apr 27, 2019? -- https://os.phil-opp.com/testing/#custom-test-frameworks
+# can't set panic = "abort" and run `cargo test`
+# panic = "abort" # disable stack unwinding on panic
+
+# `cargo build --release`
+[profile.release]
+panic = "abort" # disable stack unwinding on panic
+
+[dependencies]
+bootloader = "0.9" # newer versions cause build issues...
+volatile = "0.2.6" # This one I'm just following along and not testing.
+spin = "0.5.2" # combine with lazy_static - https://os.phil-opp.com/vga-text-mode/#spinlocks
+x86_64 = "0.14.2" # Automatically invoke 'in' and 'out' asm instructions.
+uart_16550 = "0.2.0" # Serial Port
+pic8259 = "0.10.1" # PIC before APIC
+
+[dependencies.lazy_static] # https://os.phil-opp.com/vga-text-mode/#lazy-statics
+version = "1.0"
+features = ["spin_no_std"]
+
+[[test]]
+name = "should_panic"
+harness = false
+
+[[test]]
+name = "stack_overflow"
+harness = false

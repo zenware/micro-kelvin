@@ -55,11 +55,50 @@ Test with something like the following...
 qemu-system-i386 -kernel build/micro-kelvin.bin 
 ```
 
+## Yet another build method on the way.
+Converting to rust following the first edition of this series https://os.phil-opp.com/multiboot-kernel/
+
+Build an OS Image
+```sh
+cargo add bootloader
+cargo install bootimage
+rustup component add llvm-tools-preview
+cargo bootimage
+
+# qemu-system-x86_64 -kernel target\x86_64-os\debug\bootimage-micro-kelvin.bin
+qemu-system-x86_64 -drive format=raw,file=target\x86_64-os\debug\bootimage-micro-kelvin.bin
+```
+
+Compile for CPU Target
+```sh
+cargo build --target wasm32-unknown-unknown
+cargo build --target thumbv7em-none-eabihf
+```
+
+Compile for Host OS
+```sh
+# Linux
+cargo rustc -- -C link-arg=-nostartfiles
+# Windows
+cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
+# macOS
+cargo rustc -- -C link-args="-e __start -static -nostartfiles"
+```
+
+Compile with Custom Target Definition
+```sh
+cargo build --target x86_64-os.json
+
+# Need to build parts of the stdlib.
+# TODO: Manually specify toolchain https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
+rustup component add rust-src --toolchain nightly
+cargo +nightly build -Z build-std --target x86_64-os.json
+```
+
 ---
 ## TODO
 * Not Sure yet.
 * Interrupt handling
-* [16550 UART](https://en.wikipedia.org/wiki/16550_UART) To write out to serial.
 * PS/2 Keyboard Input
 * Basic Filesystem
 * Basic Shell
@@ -68,8 +107,9 @@ qemu-system-i386 -kernel build/micro-kelvin.bin
 ---
 
 ## Currently Implemented
-* Create the Multiboot header with ASM
-* Setup a stack to be used by C
-* then call an external symbol "kernel_main" (written in C)
+* [16550 UART](https://en.wikipedia.org/wiki/16550_UART) To write out to serial.
+//* Create the Multiboot header with ASM
+//* Setup a stack to be used by C
+//* then call an external symbol "kernel_main" (written in C)
 * Address the VGA Color Monitor Text Buffer
 * Write some data to the buffer and scroll the screen
