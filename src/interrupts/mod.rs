@@ -1,6 +1,8 @@
 // Most, if-not all core imports here will be accidental.
 //use core::iter::Chain;
 //use core::error;
+// https://en.wikipedia.org/wiki/Interrupt
+// https://electronics.stackexchange.com/questions/37814/usart-uart-rs232-usb-spi-i2c-ttl-etc-what-are-all-of-these-and-how-do-th
 
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 use lazy_static::lazy_static;
@@ -58,38 +60,30 @@ extern "x86-interrupt" fn timer_interrupt_handler(
     }
 }
 
+// TODO: Instead of full-blown implementation of keyboard handling here.
+// interrupt handlers should do the bare minimum amount of work before handing off
+// to some background process that keeps working.
+// Traditionally this is some sort of queue.
+//
+// We should be cautious about using Mutex protected data structures in this process
+// because it can easily trigger deadlocks, since we aren't in control of when we
+// receive an interrupt event.
+// Ideally we should have some sort of Queue with no need for Mutexes or Allocation.
+// (the allocator requires a mutex)
+// Such a queue already exists called `crossbeam-queue`, so we'll take it as a
+// dependency.
 extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: InterruptStackFrame)
 {
-    use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
-    use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1,
-                HandleControl::Ignore)
-        );
-    }
-
-    // IBM XT, IBM 3270 PC, and IBM AT were the scancode sets.
-    // PS/2 keyboards emulate IBM XT, so that's what we do here.
-    // https://wiki.osdev.org/Keyboard#Scan_Code_Set_1
-    let mut keyboard = KEYBOARD.lock();
     // TODO: What is this magic number? - Is this the PIC-8259 PS/2 line?
     let mut port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
-    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
-        if let Some(key) = keyboard.process_keyevent(key_event) {
-            match key {
-                DecodedKey::Unicode(character) => print!("{}", character),
-                DecodedKey::RawKey(key) => print!("{:?}", key),
-            }
-        }
-    }
+    crate::task::keyboard::add_scancode(scancode);
 
-    // TODO: Consider Configuring the PS/2 Keyboard
-    // https://wiki.osdev.org/PS/2_Keyboard#Commands
+    // TODO: If it's generally not good to have a mutex protected anything in an
+    // interrupt handler, why is this one 'okay'?
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
@@ -126,7 +120,6 @@ Primary ATA ------> |            |   Floppy disk -------> |            |
 Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 */
 use pic8259::ChainedPics;
-use spin;
 
 pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
