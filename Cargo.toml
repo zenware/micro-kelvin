@@ -3,6 +3,10 @@ name = "micro-kelvin"
 version = "0.1.0"
 edition = "2021"
 authors = ["Jay Looney <jay.m.looney@gmail.com>"]
+description = "No"
+license = "Author Retains Full Copyright"
+homepage = "example.com"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -26,15 +30,38 @@ test-timeout = 300 # (in seconds)
 [profile.release]
 panic = "abort" # disable stack unwinding on panic
 
+# TODO: Attempt to upgrade dependencies slowly.
+# Start with `bootloader` and move along each dependency.
 [dependencies]
 # newer versions of bootloader were causing me build issues...
+# https://github.com/rust-osdev/bootloader/blob/main/docs/migration/v0.9.md
 bootloader = { version = "0.9", features = ["map_physical_memory"] }
+#bootloader = "0.11"
+#bootloader_api = "0.11"
 volatile = "0.2.6" # This one I'm just following along and not testing.
 spin = "0.5.2" # combine with lazy_static - https://os.phil-opp.com/vga-text-mode/#spinlocks
 x86_64 = "0.14.2" # Automatically invoke 'in' and 'out' asm instructions.
 uart_16550 = "0.2.0" # Serial Port
+# TODO: to use UEFI boot with bootloader, we need to use APIC
+# Advanced Programmable Interrupt Controller
 pic8259 = "0.10.1" # PIC before APIC
 pc-keyboard = "0.5.0" # Translates Scancode Sets
+# TODO: Experiment with different kinds of allocators.
+linked_list_allocator = "0.9.0" 
+
+[dependencies.conquer-once]
+version = "0.2.0"
+default-features = false
+
+[dependencies.crossbeam-queue]
+version = "0.2.1"
+default-features = false
+features = ["alloc"]
+
+[dependencies.futures-util]
+version = "0.3.4"
+default-features = false
+features = ["alloc"]
 
 [dependencies.lazy_static] # https://os.phil-opp.com/vga-text-mode/#lazy-statics
 version = "1.0"
